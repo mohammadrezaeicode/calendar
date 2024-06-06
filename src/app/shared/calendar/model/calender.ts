@@ -1,0 +1,18 @@
+import { CalenderEvent } from './event';
+
+export type CalenderMode = 'NEXT' | 'PERVIOUS' | 'NONE';
+export interface CalenderItem {
+  startTime: string;
+  endTime: string;
+  date: string;
+  event?: CalenderEvent;
+}
+
+export type DialogMode = 'DELETE' | 'CREATE';
+
+export interface DayReservedMap {
+  [date: string]: {
+    reservedItemsDate: Record<number, boolean>;
+    canReserveItemDate: Record<number, string>;
+  };
+}

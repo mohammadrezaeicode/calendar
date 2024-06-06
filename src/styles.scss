@@ -1,1 +1,30 @@
-/* You can add global styles to this file, and also import other style files */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+.timepicker-backdrop-overlay,
+.timepicker-overlay {
+  z-index: 10001 !important;
+}
+.timepicker-overlay {
+  --button-color: var(
+    --mat-datepicker-calendar-date-selected-state-background-color
+  );
+  --dial-background-color: var(
+    --mat-datepicker-calendar-date-selected-state-background-color
+  );
+  --dial-editable-active-color: var(
+    --mat-datepicker-calendar-date-selected-state-background-color
+  );
+  --clock-hand-color: var(
+    --mat-datepicker-calendar-date-selected-state-background-color
+  );
+}

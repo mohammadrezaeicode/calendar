@@ -1,0 +1,162 @@
+* {
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.calender-wrapper {
+  display: flex;
+  padding: 1rem;
+}
+.demo-inline-calendar-card {
+  width: 300px;
+}
+.flex-column {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.calender-container {
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  & .boundary {
+    position: absolute;
+    top: 20px;
+    left: 50px;
+    width: 100%;
+    height: 100%;
+  }
+  & .date-column {
+    display: flex;
+  }
+  & .date-row {
+    display: flex;
+    flex-direction: column;
+  }
+  & .date-container {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    margin-top: -20px;
+    position: relative;
+    & .date-item-column {
+      display: flex;
+      &.date-item-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+    }
+  }
+}
+.cell-size {
+  min-width: 100px;
+  min-height: 100px;
+  max-width: 100px;
+  max-height: 100px;
+}
+.date-item {
+  text-align: center;
+  border-right: 0.5px solid rgba(16, 9, 29, 0.29);
+  border-bottom: 0.5px solid rgba(16, 9, 29, 0.29);
+}
+.time-item-container {
+  border: none;
+  position: relative;
+  & .time-item {
+    position: absolute;
+    text-align: right;
+    top: calc(100% - 0.5em - 2px);
+    width: 100%;
+  }
+}
+.primary-style {
+  background-color: var(
+    --mat-datepicker-calendar-date-selected-state-background-color
+  );
+  color: var(--mat-datepicker-calendar-date-selected-state-text-color);
+}
+.date-item-event {
+  position: absolute;
+  z-index: 1;
+  opacity: 0.9;
+  width: 100px;
+  padding: 5px;
+  @extend .primary-style;
+}
+.cell-button {
+  height: 100%;
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+}
+.date-item-header {
+  display: flex;
+  position: sticky;
+  gap: 5px;
+  top: 0;
+  z-index: 2;
+  flex-direction: column;
+  padding-bottom: 5px;
+  justify-content: space-between;
+}
+
+.d-flex {
+  display: flex;
+  gap: 5px;
+}
+.mn-l {
+  margin-left: -50px;
+}
+.header-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.header-container {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  align-items: end;
+  justify-content: center;
+  background-color: white;
+}
+.delete-icon {
+  position: absolute;
+  display: flex;
+  right: -12px;
+  top: -12px;
+  @extend .primary-style;
+  border-radius: 50%;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 1px 0px 4px 0px #352c2cab;
+  cursor: pointer;
+}
+.item-label {
+  text-align: left;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 90px;
+  white-space: nowrap;
+  margin: 0;
+}
+.header-day {
+  border-radius: 50%;
+  padding: 9px 7px 7px 7px;
+  line-height: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
