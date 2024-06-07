@@ -80,4 +80,10 @@ export class DateUtils {
   static isDateAfter(startDate: Date, endDate: Date) {
     return this.format(startDate) > this.format(endDate);
   }
+  static isDateFullComparisonBefore(startDate: Date, endDate: Date) {
+    return startDate.getTime() < endDate.getTime();
+  }
+  static isDateFullComparisonAfter(startDate: Date, endDate: Date) {
+    return startDate.getTime() > endDate.getTime();
+  }
 }

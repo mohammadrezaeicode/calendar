@@ -11,20 +11,23 @@ export class CalendarService {
   items: CalenderHashTable = new CalenderHashTable({});
   calenderEventItemSubject: BehaviorSubject<CalenderHashTable> =
     new BehaviorSubject<CalenderHashTable>(new CalenderHashTable({}));
+  // refresh: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   constructor() {
     this.createEvent(
       {
-        date: '2024-05-25',
-        endTime: '22:00',
-        startTime: '20:30',
+        date: '2024-06-07',
+        endTime: '01:00',
+        startTime: '00:30',
+        id: 'def0',
       },
       'test'
     );
     this.createEvent(
       {
-        date: '2024-05-27',
-        endTime: '14:10',
-        startTime: '12:00',
+        date: '2024-06-07',
+        endTime: '02:00',
+        startTime: '01:30',
+        id: 'def1',
       },
       'test2'
     );
@@ -32,9 +35,19 @@ export class CalendarService {
   observeEventItems(): Observable<CalenderHashTable> {
     return this.calenderEventItemSubject.asObservable();
   }
-  updateEvent(item: CalenderItem, newItem: CalenderItem, label: string) {
+  updateEvent(
+    item: CalenderItem,
+    newItem: CalenderItem,
+    label: string,
+    apply: boolean = true
+  ) {
     this.items.deleteItem(item.date, item.startTime);
     this.items.addItem(newItem, label);
+    if (apply) {
+      this.calenderEventItemSubject.next(this.items);
+    }
+  }
+  resetEvent() {
 
     this.calenderEventItemSubject.next(this.items);
   }

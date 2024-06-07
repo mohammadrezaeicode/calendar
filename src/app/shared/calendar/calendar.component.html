@@ -6,7 +6,7 @@
                 <button mat-raised-button mat-flat-button color="accent" (click)="goToday()">Today</button>
             </div>
             <mat-card class="demo-inline-calendar-card">
-                <mat-calendar [selected]="selected" (selectedChange)="selectedDateChange($event)"></mat-calendar>
+                <mat-calendar #calendar [selected]="selected" (selectedChange)="selectedDateChange($event)"></mat-calendar>
             </mat-card>
         </div>
         <div class="calender-container">
@@ -15,7 +15,7 @@
                 <div class="date-column">
                     <div class="date-item"
                         *ngFor="let dayItem of startWeek|calendarRange:endWeek:7:true; let column = index">
-                        <div class="date-item-event" cdkDrag (cdkDragEnded)="dragEnded(item,$event,dayItem)"
+                        <div class="date-item-event" #dateItem cdkDrag (cdkDragEnded)="dragEnded(item,$event,dayItem,dateItem)"
                             *ngFor="let item of getDayEventItem(dayItem)" [style]="setStyle(item)">
                             <div class="delete-icon" (click)="openDialog('DELETE',item,$event)">
                                 <mat-icon aria-hidden="false" matTooltip="Delete Item" aria-label="Delete Item"

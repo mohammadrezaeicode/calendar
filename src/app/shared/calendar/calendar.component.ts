@@ -6,7 +6,10 @@ import {
   TemplateRef,
   ViewChild,
 } from '@angular/core';
-import { MatDatepickerInputEvent } from '@angular/material/datepicker';
+import {
+  MatCalendar,
+  MatDatepickerInputEvent,
+} from '@angular/material/datepicker';
 import { TimeConvertPipe } from './utils/time-convert-pip';
 import {
   CalenderItem,
@@ -17,7 +20,12 @@ import {
 import { CalendarService } from './service/calendar.service';
 import { CalenderHashTable } from './model/calender-hash-table';
 import { CalenderEvent } from './model/event';
-import { CdkDragEnd, DragRef, Point } from '@angular/cdk/drag-drop';
+import {
+  CdkDragEnd,
+  CdkDragStart,
+  DragRef,
+  Point,
+} from '@angular/cdk/drag-drop';
 import { MatDialog } from '@angular/material/dialog';
 import {
   FormBuilder,
@@ -38,7 +46,10 @@ import { DateUtils } from './utils/date-utils';
 export class CalendarComponent implements OnInit {
   @ViewChild('dialog') temp?: TemplateRef<unknown>;
   @ViewChild('boundary') boundaryElement?: ElementRef;
+  @ViewChild('calendar') calendar?: MatCalendar<Date>;
+
   @Input() height: string = '500px';
+
   startWeek: number = -1;
   endWeek: number = -1;
   selectedDay: number = -1;
@@ -58,7 +69,8 @@ export class CalendarComponent implements OnInit {
   searchItem: string[] = [];
   searchControl: FormControl = new FormControl('');
   filteredOptions: Observable<string[]> = of([]);
-
+  dayOfWeekName = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  resetSignal = 1;
   constructor(
     private calendarService: CalendarService,
     private dialog: MatDialog,
@@ -131,7 +143,8 @@ export class CalendarComponent implements OnInit {
   dragEnded(
     item: CalenderItem,
     event: CdkDragEnd<unknown>,
-    selectedDay: number
+    selectedDay: number,
+    node: HTMLDivElement
   ) {
     const backward = event.distance.y < 0;
     const move = (event.distance.y * 60) / 100;
@@ -171,15 +184,26 @@ export class CalendarComponent implements OnInit {
     } else if (DateUtils.isDateAfter(newDate, endWeek)) {
       newDate = endWeek;
     }
-    this.calendarService.updateEvent(
-      item,
-      {
-        date: DateUtils.format(newDate),
-        endTime: newEndTime,
-        startTime: newStartTime,
-      },
-      item.event!.getLabel()
-    );
+    let newItem = {
+      date: DateUtils.format(newDate),
+      endTime: newEndTime,
+      startTime: newStartTime,
+      id: item.id,
+    };
+    if (this.validateEventItems(newItem)) {
+      this.calendarService.updateEvent(
+        item,
+        {
+          ...newItem,
+          id: Date.now() + '',
+        },
+        item.event!.getLabel()
+      );
+    } else {
+      // this.calendarService.resetEvent();
+      this._snackBar.open('Collision between times', 'close');
+    }
+    node.style.transform = '';
   }
   closeDialog() {
     this.reset();
@@ -238,14 +262,17 @@ export class CalendarComponent implements OnInit {
         this._snackBar.open('Start time must be before end time', 'close');
         return;
       }
-      this.calendarService.createEvent(
-        {
-          date: DateUtils.format(this.form.value.date),
-          endTime: DateUtils.formatTime(endTimeMoment),
-          startTime: DateUtils.formatTime(startTimeMoment),
-        },
-        this.form.value.label
-      );
+      const newItem = {
+        date: DateUtils.format(this.form.value.date),
+        endTime: DateUtils.formatTime(endTimeMoment),
+        startTime: DateUtils.formatTime(startTimeMoment),
+        id: Date.now() + '',
+      };
+      if (!this.validateEventItems(newItem)) {
+        this._snackBar.open('Collision between times', 'close');
+        return;
+      }
+      this.calendarService.createEvent(newItem, this.form.value.label);
       this.closeDialog();
     } else {
       this.form.markAllAsTouched();
@@ -293,9 +320,8 @@ export class CalendarComponent implements OnInit {
         canReserveItemDate,
       };
     });
-    this.eventRecord = eventRecord;
+    this.eventRecord = { ...eventRecord };
   }
-  dayOfWeekName = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   private _filter(value: string): string[] {
     const filterValue = value.toLowerCase();
@@ -347,19 +373,52 @@ export class CalendarComponent implements OnInit {
     return this.eventRecord[day];
   }
   goToday() {
-    this.selectedDateChange(new Date());
+    const selectedDate = new Date();
+    this.selectedDateChange(selectedDate);
+    if (this.calendar) {
+      this.calendar.activeDate = selectedDate;
+      this.calendar.selected = selectedDate;
+      this.calendar.updateTodaysDate();
+    }
   }
   selectedDateChange($event: Date | string) {
     this.selected = new Date($event);
     this.configureCalendar();
   }
-  calculateTopOfEventItems(event: CalenderEvent) {}
+  validateEventItems(item: CalenderItem) {
+    let items = this.calenderHashTable.getItems(item.date);
+    let valid = true;
+    if (items) {
+      let keys = Object.keys(items);
+      const newStartTime = item.startTime;
+      const newEndTime = item.endTime;
+      const length = keys.length;
+      for (let index = 0; index < length; index++) {
+        const element = items[keys[index]];
+        if (element.id == item.id) {
+          continue;
+        }
+        const elStartTime = element.startTime;
+        const elEndTime = element.endTime;
+        if (
+          (newStartTime < elEndTime && newEndTime >= elEndTime) ||
+          (newEndTime > elStartTime && newEndTime <= elEndTime) ||
+          (newStartTime > elStartTime && newEndTime < elEndTime)
+        ) {
+          valid = false;
+        }
+      }
+    }
+    console.log(valid);
+    
+    return valid;
+  }
   setStyle(item: CalenderItem) {
     const event = item.event!;
-
     const top = event.getStartHour() * 100 + 100 + event.getStartPresentMin();
     const height =
       event.getEndHour() * 100 + 100 + event.getEndPresentMin() - top;
+
     return {
       top: top + 'px',
       height: height + 'px',
