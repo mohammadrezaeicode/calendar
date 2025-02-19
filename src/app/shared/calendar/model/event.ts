@@ -1,4 +1,3 @@
-import moment from 'moment';
 
 export class CalenderEvent {
   private label: string;
@@ -45,11 +44,26 @@ export class CalenderEvent {
   calculatePresent(min: number) {
     return (min * 100) / 60;
   }
+  private static formatTime(time: string) {
+    const [hour, min] = time.split(':');
+    if (!hour || !min) {
+      return '';
+    }
+    const amPM = +hour >= 12 ? 'PM' : 'AM';
+    const hour12 = +hour % 12 || 12;
+    return (
+      hour12.toString().padStart(2, '0') +
+      ':' +
+      min.toString().padStart(2, '0') +
+      ' ' +
+      amPM
+    );
+  }
   getStartTime() {
-    return moment(this.start, 'HH:mm').format('h:mm a');
+    return CalenderEvent.formatTime(this.start);
   }
   getEndTime() {
-    return moment(this.end, 'HH:mm').format('h:mm a');
+    return CalenderEvent.formatTime(this.end);
   }
   toString() {
     return `${this.label} (${this.getStartTime()}-${this.getEndTime()})`;
@@ -74,17 +88,17 @@ export class CalenderEvent {
       if (index == 0) {
         if (this.startMin > 0) {
           canReserveItem[element] =
-            moment(element + ':00', 'HH:mm').format('h:mm a') +
+            CalenderEvent.formatTime(element + ':00') +
             '-' +
-            moment(element + ':' + this.startMin, 'HH:mm').format('h:mm a');
+            CalenderEvent.formatTime(element + ':' + this.startMin);
           continue;
         }
       } else if (index + 1 >= diff) {
         if (this.endMin > 0) {
           canReserveItem[element] =
-            moment(element + ':' + this.endMin, 'HH:mm').format('h:mm a') +
+            CalenderEvent.formatTime(element + ':' + this.endMin) +
             '-' +
-            moment(element + 1 + ':00', 'HH:mm').format('h:mm a');
+            CalenderEvent.formatTime(element + 1 + ':00');
           continue;
         }
       }
@@ -101,9 +115,9 @@ export class CalenderEvent {
       .fill('')
       .map((value, index) => {
         return (
-          moment(index + ':00', 'H:mm').format('h:mm a') +
+          this.formatTime(index + ':00') +
           '-' +
-          moment(index + 1 + ':00', 'H:mm').format('h:mm a')
+          this.formatTime(index + 1 + ':00')
         );
       });
   }

@@ -9,7 +9,7 @@ export class DateUtils {
     const endDate = this.createDateBaseOnTime(endTime).getTime();
     return endDate - startDate;
   }
-  static dayMill: number = 86400000; //24*60*60*1000
+  static dayMill: number = 86400000;
   static startWeek(date: number | Date) {
     let dateObject = new Date(date);
     let weekDay = dateObject.getDay();

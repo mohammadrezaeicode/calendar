@@ -252,11 +252,11 @@ export class CalendarComponent implements OnInit {
   }
   createItem() {
     if (this.form.valid) {
-      const endTimeMoment = this.form.value.endTime;
-      const startTimeMoment = this.form.value.startTime;
+      const endTime = this.form.value.endTime.toLowerCase();
+      const startTime = this.form.value.startTime.toLowerCase();
       const validTime = DateUtils.validateStartAndEndDate(
-        startTimeMoment,
-        endTimeMoment
+        startTime,
+        endTime
       );
       if (!validTime) {
         this._snackBar.open('Start time must be before end time', 'close');
@@ -264,8 +264,8 @@ export class CalendarComponent implements OnInit {
       }
       const newItem = {
         date: DateUtils.format(this.form.value.date),
-        endTime: DateUtils.formatTime(endTimeMoment),
-        startTime: DateUtils.formatTime(startTimeMoment),
+        endTime: DateUtils.formatTime(endTime),
+        startTime: DateUtils.formatTime(startTime),
         id: Date.now() + '',
       };
       if (!this.validateEventItems(newItem)) {
@@ -280,10 +280,10 @@ export class CalendarComponent implements OnInit {
   }
   getDateRanges() {
     const dates = [];
-    let startDateMoment = new Date(this.startDate);
+    let startDate = new Date(this.startDate);
     for (let index = 0; index < 7; index++) {
-      dates.push(startDateMoment);
-      startDateMoment = DateUtils.add(startDateMoment, 1, 'day');
+      dates.push(startDate);
+      startDate = DateUtils.add(startDate, 1, 'day');
     }
     return dates;
   }
