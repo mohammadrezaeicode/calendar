@@ -9,7 +9,7 @@ export interface CalenderItem {
   event?: CalenderEvent;
 }
 
-export type DialogMode = 'DELETE' | 'CREATE';
+export type DialogMode = 'DELETE' | 'CREATE'|'EDIT';
 
 export interface DayReservedMap {
   [date: string]: {

@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   Input,
+  OnDestroy,
   OnInit,
   TemplateRef,
   ViewChild,
@@ -11,21 +12,11 @@ import {
   MatDatepickerInputEvent,
 } from '@angular/material/datepicker';
 import { TimeConvertPipe } from './utils/time-convert-pip';
-import {
-  CalenderItem,
-  CalenderMode,
-  DayReservedMap,
-  DialogMode,
-} from './model/calender';
+import { CalenderItem, DayReservedMap, DialogMode } from './model/calender';
 import { CalendarService } from './service/calendar.service';
 import { CalenderHashTable } from './model/calender-hash-table';
 import { CalenderEvent } from './model/event';
-import {
-  CdkDragEnd,
-  CdkDragStart,
-  DragRef,
-  Point,
-} from '@angular/cdk/drag-drop';
+import { CdkDragEnd, CdkDragStart } from '@angular/cdk/drag-drop';
 import { MatDialog } from '@angular/material/dialog';
 import {
   FormBuilder,
@@ -35,42 +26,35 @@ import {
 } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Observable, map, of, startWith } from 'rxjs';
+import { Observable, Subscription, map, of, startWith } from 'rxjs';
 import { DateUtils } from './utils/date-utils';
+import { CalendarLogic } from './core/CalanderLogic';
 
 @Component({
   selector: 'app-calendar',
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.scss',
 })
-export class CalendarComponent implements OnInit {
+export class CalendarComponent
+  extends CalendarLogic
+  implements OnInit, OnDestroy
+{
   @ViewChild('dialog') temp?: TemplateRef<unknown>;
   @ViewChild('boundary') boundaryElement?: ElementRef;
   @ViewChild('calendar') calendar?: MatCalendar<Date>;
-
   @Input() height: string = '500px';
-
-  startWeek: number = -1;
-  endWeek: number = -1;
-  selectedDay: number = -1;
-  mode: CalenderMode = 'NONE';
-  yearAndMonth: string = '';
-  selected: Date | number = new Date();
-  calenderHashTable: CalenderHashTable = {} as CalenderHashTable;
-  eventRecord: Record<number, CalenderItem[]> = {};
-  startDate: Date = new Date();
-  endDate: Date = new Date();
+  eventItemSubscription: Subscription;
+  updateConfigurationSubscription: Subscription;
   breakPoint = false;
   form: FormGroup;
-  selectedItemForDelete: CalenderItem | null = null;
+  selectedItem: CalenderItem | null = null;
   reservedTime: Record<string, Record<number, string>> = {};
   dialogMode: DialogMode = 'CREATE';
   dayReservedMap: DayReservedMap = {};
   searchItem: string[] = [];
   searchControl: FormControl = new FormControl('');
   filteredOptions: Observable<string[]> = of([]);
-  dayOfWeekName = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  resetSignal = 1;
+  hasMovingItem: boolean = false;
   constructor(
     private calendarService: CalendarService,
     private dialog: MatDialog,
@@ -78,21 +62,37 @@ export class CalendarComponent implements OnInit {
     private _snackBar: MatSnackBar,
     private breakpointObserver: BreakpointObserver
   ) {
+    super();
     this.form = this.fb.group({
       startTime: ['', Validators.required],
       endTime: ['', Validators.required],
       date: ['', Validators.required],
       label: ['', Validators.required],
     });
-    calendarService.observeEventItems().subscribe((calender) => {
-      this.calenderHashTable = calender;
-      this.updateEventList(calender);
-    });
+    this.eventItemSubscription = calendarService
+      .observeEventItems()
+      .subscribe((calender) => {
+        this.calenderHashTable = calender;
+        this.updateEventList(calender);
+      });
     this.breakpointObserver
       .observe(['(max-width: 1000px)'])
       .subscribe((result) => {
         this.breakPoint = result.matches;
       });
+
+    this.updateConfigurationSubscription =
+      this.getConfigurationChangedSubject().subscribe((value) => {
+        this.updateEventList(value);
+      });
+  }
+  ngOnDestroy(): void {
+    if (this.eventItemSubscription) {
+      this.eventItemSubscription.unsubscribe();
+    }
+    if (this.updateConfigurationSubscription) {
+      this.updateConfigurationSubscription.unsubscribe();
+    }
   }
   ngOnInit(): void {
     this.configureCalendar();
@@ -109,6 +109,40 @@ export class CalendarComponent implements OnInit {
         }
       }
     });
+  }
+  updateEventList(calenderHashTable: CalenderHashTable) {
+    const eventRecord: Record<number, CalenderItem[]> = {};
+    let dates = this.getDateRanges();
+    dates.forEach((date: Date) => {
+      let reservedItemsDate: Record<number, boolean> = {};
+      let canReserveItemDate: Record<number, string> = {};
+      const day = new Date(date).getDate();
+      const dateKey = DateUtils.format(date);
+      const data = calenderHashTable.getItems(dateKey);
+      if (!data) {
+        return;
+      }
+      const values: CalenderItem[] = Object.values(data);
+      values.forEach((item) => {
+        if (item.event) {
+          if (!eventRecord[day]) {
+            eventRecord[day] = [];
+          }
+          eventRecord[day].push(item);
+          if (item.event) {
+            let { reservedItems, canReserveItem } =
+              item.event.generateDifferentArray();
+            reservedItemsDate = { ...reservedItemsDate, ...reservedItems };
+            canReserveItemDate = { ...canReserveItemDate, ...canReserveItem };
+          }
+        }
+      });
+      this.dayReservedMap[dateKey] = {
+        reservedItemsDate,
+        canReserveItemDate,
+      };
+    });
+    this.eventRecord = { ...eventRecord };
   }
   trackFilter(index: number, item: string) {
     return index + item;
@@ -139,6 +173,9 @@ export class CalendarComponent implements OnInit {
   reset() {
     this.form.reset();
     this.form.markAsUntouched();
+  }
+  dragStarted(event: CdkDragStart<unknown>) {
+    this.hasMovingItem = true;
   }
   dragEnded(
     item: CalenderItem,
@@ -200,191 +237,128 @@ export class CalendarComponent implements OnInit {
         item.event!.getLabel()
       );
     } else {
-      // this.calendarService.resetEvent();
       this._snackBar.open('Collision between times', 'close');
     }
     node.style.transform = '';
+    this.hasMovingItem = false;
   }
-  closeDialog() {
-    this.reset();
-    this.dialog.closeAll();
+  clickItem(item: CalenderItem) {
+    if (this.hasMovingItem) {
+      return;
+    }
+    this.form.setValue({
+      startTime: item.startTime,
+      endTime: item.endTime,
+      date: new Date(item.date + ' ' + item.startTime),
+      label: item.event?.getLabel() ?? '',
+    });
+    this.openDialog('EDIT', item, null);
+  }
+  validateFormAndReturnItem(id: string | null = null): CalenderItem | null {
+    if (!id) {
+      id = Date.now() + '';
+    }
+    const endTime = this.form.value.endTime.toLowerCase();
+    const startTime = this.form.value.startTime.toLowerCase();
+    const validTime = DateUtils.validateStartAndEndDate(startTime, endTime);
+    if (!validTime) {
+      this._snackBar.open('Start time must be before end time', 'close');
+      return null;
+    }
+    const newItem: CalenderItem = {
+      date: DateUtils.format(this.form.value.date),
+      endTime: DateUtils.formatTime(endTime),
+      startTime: DateUtils.formatTime(startTime),
+      id,
+    };
+    if (!this.validateEventItems(newItem)) {
+      this._snackBar.open('Collision between times', 'close');
+      return null;
+    }
+    return newItem;
+  }
+  createItem() {
+    if (this.form.valid) {
+      let newItem = this.validateFormAndReturnItem();
+      if (newItem) {
+        this.calendarService.createEvent(newItem, this.form.value.label);
+        this.closeDialog();
+      }
+    } else {
+      this.form.markAllAsTouched();
+    }
+  }
+  updateItem() {
+    if (this.selectedItem) {
+      let newItem = this.validateFormAndReturnItem(this.selectedItem.id);
+      if (newItem)
+        this.calendarService.updateEvent(
+          this.selectedItem,
+          newItem,
+          this.form.get('label')?.value,
+          true
+        );
+      this.closeDialog();
+    }
+  }
+  deleteItem() {
+    if (this.selectedItem) {
+      this.calendarService.deleteEvent(this.selectedItem);
+    }
+    this.closeDialog();
   }
   openDialog(
     dialogMode: DialogMode,
     item: CalenderItem | null = null,
     event: MouseEvent | null = null
   ) {
+    if (this.hasMovingItem) {
+      return;
+    }
     if (event) {
       event.preventDefault();
+      event.stopPropagation();
     }
     this.dialogMode = dialogMode;
-    this.selectedItemForDelete = item;
+    this.selectedItem = item;
     if (this.temp) this.dialog.open(this.temp);
   }
-  deleteItem() {
-    if (this.selectedItemForDelete) {
-      this.calendarService.deleteEvent(this.selectedItemForDelete);
-    }
-    this.closeDialog();
-  }
-  setElementBoundary(
-    userPointerPosition: Point,
-    dragRef: DragRef,
-    dimensions: DOMRect,
-    pickupPositionInElement: Point
-  ): Point {
-    let el = this.boundaryElement?.nativeElement.getBoundingClientRect();
-    let moved = {
-      x: userPointerPosition.x - pickupPositionInElement.x,
-      y: userPointerPosition.y - pickupPositionInElement.y,
-    };
-    if (userPointerPosition.x < el.x) {
-      return pickupPositionInElement;
-    }
-    return moved;
+  closeDialog() {
+    this.reset();
+    this.dialog.closeAll();
   }
   acceptDialog() {
     if (this.dialogMode == 'CREATE') {
       this.createItem();
+    } else if (this.dialogMode == 'EDIT') {
+      this.updateItem();
     } else {
       this.deleteItem();
     }
   }
-  createItem() {
-    if (this.form.valid) {
-      const endTime = this.form.value.endTime.toLowerCase();
-      const startTime = this.form.value.startTime.toLowerCase();
-      const validTime = DateUtils.validateStartAndEndDate(
-        startTime,
-        endTime
-      );
-      if (!validTime) {
-        this._snackBar.open('Start time must be before end time', 'close');
-        return;
-      }
-      const newItem = {
-        date: DateUtils.format(this.form.value.date),
-        endTime: DateUtils.formatTime(endTime),
-        startTime: DateUtils.formatTime(startTime),
-        id: Date.now() + '',
-      };
-      if (!this.validateEventItems(newItem)) {
-        this._snackBar.open('Collision between times', 'close');
-        return;
-      }
-      this.calendarService.createEvent(newItem, this.form.value.label);
-      this.closeDialog();
-    } else {
-      this.form.markAllAsTouched();
-    }
-  }
-  getDateRanges() {
-    const dates = [];
-    let startDate = new Date(this.startDate);
-    for (let index = 0; index < 7; index++) {
-      dates.push(startDate);
-      startDate = DateUtils.add(startDate, 1, 'day');
-    }
-    return dates;
-  }
-
-  updateEventList(calenderHashTable: CalenderHashTable) {
-    const eventRecord: Record<number, CalenderItem[]> = {};
-    let dates = this.getDateRanges();
-    dates.forEach((date: Date) => {
-      let reservedItemsDate: Record<number, boolean> = {};
-      let canReserveItemDate: Record<number, string> = {};
-      const day = new Date(date).getDate();
-      const dateKey = DateUtils.format(date);
-      const data = calenderHashTable.getItems(dateKey);
-      if (!data) {
-        return;
-      }
-      const values: CalenderItem[] = Object.values(data);
-      values.forEach((item) => {
-        if (item.event) {
-          if (!eventRecord[day]) {
-            eventRecord[day] = [];
-          }
-          eventRecord[day].push(item);
-          if (item.event) {
-            let { reservedItems, canReserveItem } =
-              item.event.generateDifferentArray();
-            reservedItemsDate = { ...reservedItemsDate, ...reservedItems };
-            canReserveItemDate = { ...canReserveItemDate, ...canReserveItem };
-          }
-        }
-      });
-      this.dayReservedMap[dateKey] = {
-        reservedItemsDate,
-        canReserveItemDate,
-      };
-    });
-    this.eventRecord = { ...eventRecord };
-  }
 
   private _filter(value: string): string[] {
     const filterValue = value.toLowerCase();
-
     return this.searchItem.filter((option) =>
       option.toLowerCase().includes(filterValue)
     );
   }
-  configureCalendar() {
-    this.mode = 'NONE';
-    if (!this.selected) {
-      this.selected = new Date();
-    }
-    this.yearAndMonth = DateUtils.formatYearMonth(this.selected);
-    let startWeekDateObject = DateUtils.startWeek(this.selected);
-    this.startWeek = startWeekDateObject.getDate();
-    this.selectedDay = new Date(this.selected).getDate();
-    let endWeekDateObject = DateUtils.endWeek(this.selected);
-
-    this.endWeek = endWeekDateObject.getDate();
-    if (this.startWeek > this.endWeek) {
-      if (this.selectedDay >= this.startWeek) {
-        this.mode = 'NEXT';
-      } else {
-        this.mode = 'PERVIOUS';
-      }
-    }
-
-    this.startDate = new Date(startWeekDateObject);
-    this.endDate = new Date(endWeekDateObject);
-    this.updateEventList(this.calenderHashTable);
-  }
-  getDayEventItem(day: number) {
-    const records = this.eventRecord[day];
-    return records ? records : [];
-  }
-  selectedRow(day: number, time: number) {
-    let date = new Date(this.selected);
-    date.setDate(day);
-    this.form.setValue({
-      startTime: TimeConvertPipe.convertor(time - 1, true),
-      endTime: TimeConvertPipe.convertor(time, true),
-      date: date,
-      label: '',
-    });
+  override selectedRow(day: number, time: number) {
+    let date = super.selectedRow(day, time);
+    this.form.setValue(date);
     this.openDialog('CREATE');
+    return date;
   }
-  getItem(day: number) {
-    return this.eventRecord[day];
-  }
-  goToday() {
-    const selectedDate = new Date();
-    this.selectedDateChange(selectedDate);
+  override goToday(): Date {
+    let selectedDate = super.goToday();
     if (this.calendar) {
       this.calendar.activeDate = selectedDate;
       this.calendar.selected = selectedDate;
       this.calendar.updateTodaysDate();
     }
+    return selectedDate;
   }
-  selectedDateChange($event: Date | string) {
-    this.selected = new Date($event);
-    this.configureCalendar();
-  }
+
   validateEventItems(item: CalenderItem) {
     let items = this.calenderHashTable.getItems(item.date);
     let valid = true;
@@ -409,8 +383,6 @@ export class CalendarComponent implements OnInit {
         }
       }
     }
-    console.log(valid);
-    
     return valid;
   }
   setStyle(item: CalenderItem) {
@@ -418,7 +390,6 @@ export class CalendarComponent implements OnInit {
     const top = event.getStartHour() * 100 + 100 + event.getStartPresentMin();
     const height =
       event.getEndHour() * 100 + 100 + event.getEndPresentMin() - top;
-
     return {
       top: top + 'px',
       height: height + 'px',

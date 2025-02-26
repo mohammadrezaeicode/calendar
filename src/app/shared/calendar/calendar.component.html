@@ -1,117 +1,217 @@
 <mat-card>
-    <div class="calender-wrapper" [class.flex-column]="breakPoint">
-        <div class="d-flex flex-column">
-            <div class="d-flex" style="justify-content: center;">
-                <button mat-raised-button mat-flat-button color="primary" (click)="openDialog('CREATE')">Create</button>
-                <button mat-raised-button mat-flat-button color="accent" (click)="goToday()">Today</button>
-            </div>
-            <mat-card class="demo-inline-calendar-card">
-                <mat-calendar #calendar [selected]="selected" (selectedChange)="selectedDateChange($event)"></mat-calendar>
-            </mat-card>
-        </div>
-        <div class="calender-container">
-            <div #boundary class="boundary"></div>
-            <div class="date-container" [style.height]="height">
-                <div class="date-column">
-                    <div class="date-item"
-                        *ngFor="let dayItem of startWeek|calendarRange:endWeek:7:true; let column = index">
-                        <div class="date-item-event" #dateItem cdkDrag (cdkDragEnded)="dragEnded(item,$event,dayItem,dateItem)"
-                            *ngFor="let item of getDayEventItem(dayItem)" [style]="setStyle(item)">
-                            <div class="delete-icon" (click)="openDialog('DELETE',item,$event)">
-                                <mat-icon aria-hidden="false" matTooltip="Delete Item" aria-label="Delete Item"
-                                    fontIcon="close">
-                                </mat-icon>
-                            </div>
-                            <ng-container *ngIf="item.event">
-                                <p class="item-label" [matTooltip]="item.event.toString()">
-                                    {{item.event.getLabel()}}</p>
-                                <p class="item-label" [matTooltip]="item.event.toString()">
-                                    {{item.event.getStartTime()}}<br>{{item.event.getEndTime()}}</p>
-                            </ng-container>
-
-                        </div>
-                        <div class="date-row cell-size" [ngClass]="{'mn-l':dayItem==0,'date-item-header':row==0}"
-                            *ngFor="let row of 0|calendarRange:25:25">
-                            <div class="time-item-container" *ngIf="dayItem==0">
-                                <div class="time-item">{{row-1|timeConvert}}</div>
-                            </div>
-                            <div class="date-item  cell-size" [class.header-container]="row==0" *ngIf="dayItem>0">
-                                <ng-container *ngIf="row==0;else mainCell">
-                                    <div class="date-item-header">
-                                        <div class="header-week">
-                                            {{dayOfWeekName[column-1]}}
-                                        </div>
-                                        <div class="header-day" [class.primary-style]="selectedDay==dayItem">
-                                            {{dayItem}}
-                                        </div>
-                                    </div>
-                                </ng-container>
-                                <ng-template #mainCell>
-                                    <div (click)="selectedRow(dayItem,row)" class="cell-button cell-size">
-                                    </div>
-                                </ng-template>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="calender-wrapper" [class.flex-column]="breakPoint">
+    <div class="d-flex flex-column">
+      <div class="d-flex" style="justify-content: center">
+        <button
+          mat-raised-button
+          mat-flat-button
+          color="primary"
+          (click)="openDialog('CREATE')"
+        >
+          Create
+        </button>
+        <button
+          mat-raised-button
+          mat-flat-button
+          color="accent"
+          (click)="goToday()"
+        >
+          Today
+        </button>
+      </div>
+      <mat-card class="demo-inline-calendar-card">
+        <mat-calendar
+          #calendar
+          [selected]="selected"
+          (selectedChange)="selectedDateChange($event)"
+        ></mat-calendar>
+      </mat-card>
     </div>
+    <div class="calender-container">
+      <div #boundary class="boundary"></div>
+      <div class="date-container" [style.height]="height">
+        <div class="date-column">
+          <div
+            class="date-item"
+            *ngFor="
+              let dayItem of startWeek | calendarRange : endWeek : 7 : true;
+              let column = index
+            "
+          >
+            <div
+              class="date-item-event"
+              (click)="clickItem(item)"
+              #dateItem
+              cdkDrag
+              (cdkDragStarted)="dragStarted($event)"
+              (cdkDragEnded)="dragEnded(item, $event, dayItem, dateItem)"
+              *ngFor="let item of getDayEventItem(dayItem)"
+              [style]="setStyle(item)"
+            >
+              <div
+                class="delete-icon"
+                (click)="openDialog('DELETE', item, $event)"
+              >
+                <mat-icon
+                  aria-hidden="false"
+                  matTooltip="Delete Item"
+                  aria-label="Delete Item"
+                  fontIcon="close"
+                >
+                </mat-icon>
+              </div>
+              <ng-container *ngIf="item.event">
+                <p class="item-label" [matTooltip]="item.event.toString()">
+                  {{ item.event.getLabel() }}
+                </p>
+                <p class="item-label" [matTooltip]="item.event.toString()">
+                  {{ item.event.getStartTime() }}<br />{{
+                    item.event.getEndTime()
+                  }}
+                </p>
+              </ng-container>
+            </div>
+            <div
+              class="date-row cell-size"
+              [ngClass]="{ 'mn-l': dayItem == 0, 'date-item-header': row == 0 }"
+              *ngFor="let row of 0 | calendarRange : 25 : 25"
+            >
+              <div class="time-item-container" *ngIf="dayItem == 0">
+                <div class="time-item">{{ row - 1 | timeConvert }}</div>
+              </div>
+              <div
+                class="date-item cell-size"
+                [class.header-container]="row == 0"
+                *ngIf="dayItem > 0"
+              >
+                <ng-container *ngIf="row == 0; else mainCell">
+                  <div class="date-item-header">
+                    <div class="header-week">
+                      {{ dayOfWeekName[column - 1] }}
+                    </div>
+                    <div
+                      class="header-day"
+                      [class.primary-style]="selectedDay == dayItem"
+                    >
+                      {{ dayItem }}
+                    </div>
+                  </div>
+                </ng-container>
+                <ng-template #mainCell>
+                  <div
+                    (click)="selectedRow(dayItem, row)"
+                    class="cell-button cell-size"
+                  ></div>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </mat-card>
 <ng-template #dialog>
-    <h2 mat-dialog-title style="text-transform: capitalize;">{{dialogMode}}</h2>
+  <h2 mat-dialog-title style="text-transform: capitalize">{{ dialogMode }}</h2>
 
-    <mat-dialog-content *ngIf="dialogMode=='CREATE';else deleteContent" class="mat-typography">
-        <form [formGroup]="form" class="form">
-            <mat-form-field>
-                <mat-label>Title</mat-label>
-                <input aria-label="Title" matInput formControlName="label">
-                <mat-error *ngIf="hasError('label')">label is required</mat-error>
-            </mat-form-field>
-            <mat-form-field>
-                <mat-label>Appointment date</mat-label>
-                <input aria-label="Appointment date" (dateChange)="dateChanged($event)" matInput
-                    [matDatepicker]="datePicker" formControlName="date">
-                <mat-error *ngIf="hasError('date')">Appointment date is required</mat-error>
-                <mat-datepicker-toggle matIconSuffix [for]="datePicker"></mat-datepicker-toggle>
-                <mat-datepicker #datePicker></mat-datepicker>
-            </mat-form-field>
-            <mat-form-field>
-                <mat-label>Search in Times</mat-label>
-                <input type="text" placeholder="Choose one" aria-label="Number" matInput [formControl]="searchControl"
-                    [matAutocomplete]="auto">
-                <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
-                    <mat-option [value]="option"
-                        *ngFor="let option of filteredOptions | async; trackBy:trackFilter">{{option}}</mat-option>
-                </mat-autocomplete>
-            </mat-form-field>
-            <mat-form-field>
-                <mat-label>Start time</mat-label>
-                <input aria-label="Start time" matInput [ngxTimepicker]="startTimePicker" formControlName="startTime">
-                <mat-error *ngIf="hasError('startTime')">Start time is required</mat-error>
+  <mat-dialog-content
+    *ngIf="dialogMode == 'CREATE' || dialogMode == 'EDIT'; else deleteContent"
+    class="mat-typography"
+  >
+    <form [formGroup]="form" class="form">
+      <mat-form-field>
+        <mat-label>Title</mat-label>
+        <input aria-label="Title" matInput formControlName="label" />
+        <mat-error *ngIf="hasError('label')">label is required</mat-error>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Appointment date</mat-label>
+        <input
+          aria-label="Appointment date"
+          (dateChange)="dateChanged($event)"
+          matInput
+          [matDatepicker]="datePicker"
+          formControlName="date"
+        />
+        <mat-error *ngIf="hasError('date')"
+          >Appointment date is required</mat-error
+        >
+        <mat-datepicker-toggle
+          matIconSuffix
+          [for]="datePicker"
+        ></mat-datepicker-toggle>
+        <mat-datepicker #datePicker></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Search in Times</mat-label>
+        <input
+          type="text"
+          placeholder="Choose one"
+          aria-label="Number"
+          matInput
+          [formControl]="searchControl"
+          [matAutocomplete]="auto"
+        />
+        <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
+          <mat-option
+            [value]="option"
+            *ngFor="let option of filteredOptions | async; trackBy: trackFilter"
+            >{{ option }}</mat-option
+          >
+        </mat-autocomplete>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Start time</mat-label>
+        <input
+          aria-label="Start time"
+          matInput
+          [ngxTimepicker]="startTimePicker"
+          formControlName="startTime"
+        />
+        <mat-error *ngIf="hasError('startTime')"
+          >Start time is required</mat-error
+        >
 
-                <ngx-material-timepicker #startTimePicker></ngx-material-timepicker>
-            </mat-form-field>
-            <mat-form-field>
-                <mat-label>End time</mat-label>
-                <input aria-label="End time" matInput [ngxTimepicker]="endTimePicker" formControlName="endTime">
-                <mat-error *ngIf="hasError('endTime')">End time is required</mat-error>
-                <ngx-material-timepicker #endTimePicker></ngx-material-timepicker>
-            </mat-form-field>
-        </form>
-
+        <ngx-material-timepicker #startTimePicker></ngx-material-timepicker>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>End time</mat-label>
+        <input
+          aria-label="End time"
+          matInput
+          [ngxTimepicker]="endTimePicker"
+          formControlName="endTime"
+        />
+        <mat-error *ngIf="hasError('endTime')">End time is required</mat-error>
+        <ngx-material-timepicker #endTimePicker></ngx-material-timepicker>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+  <ng-template #deleteContent>
+    <mat-dialog-content class="mat-typography">
+      Would you like to delete {{ selectedItem?.event?.getLabel() }}?
     </mat-dialog-content>
-    <ng-template #deleteContent>
-        <mat-dialog-content class="mat-typography">
-            Would you like to delete {{selectedItemForDelete?.event?.getLabel()}}?
-        </mat-dialog-content>
-    </ng-template>
+  </ng-template>
 
-
-    <mat-dialog-actions align="end">
-        <button mat-button mat-raised-button mat-flat-button color="accent" (click)="closeDialog()">close</button>
-        <button mat-button mat-raised-button mat-flat-button color="primary" cdkFocusInitial
-            (click)="acceptDialog()">Accept</button>
-    </mat-dialog-actions>
+  <mat-dialog-actions align="end">
+    <button
+      mat-button
+      mat-raised-button
+      mat-flat-button
+      color="accent"
+      (click)="closeDialog()"
+    >
+      close
+    </button>
+    <button
+      mat-button
+      mat-raised-button
+      mat-flat-button
+      color="primary"
+      cdkFocusInitial
+      (click)="acceptDialog()"
+    >
+      Accept
+    </button>
+  </mat-dialog-actions>
 </ng-template>

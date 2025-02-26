@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { CalenderItem } from '../model/calender';
 import { CalenderHashTable } from '../model/calender-hash-table';
-import { CalenderEvent } from '../model/event';
 
 @Injectable({
   providedIn: 'root',
@@ -11,11 +10,10 @@ export class CalendarService {
   items: CalenderHashTable = new CalenderHashTable({});
   calenderEventItemSubject: BehaviorSubject<CalenderHashTable> =
     new BehaviorSubject<CalenderHashTable>(new CalenderHashTable({}));
-  // refresh: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   constructor() {
     this.createEvent(
       {
-        date: '2024-06-07',
+        date: '2025-02-26',
         endTime: '01:00',
         startTime: '00:30',
         id: 'def0',
@@ -24,7 +22,7 @@ export class CalendarService {
     );
     this.createEvent(
       {
-        date: '2024-06-07',
+        date: '2025-02-26',
         endTime: '02:00',
         startTime: '01:30',
         id: 'def1',
@@ -48,7 +46,6 @@ export class CalendarService {
     }
   }
   resetEvent() {
-
     this.calenderEventItemSubject.next(this.items);
   }
   createEvent(item: CalenderItem, label: string) {
