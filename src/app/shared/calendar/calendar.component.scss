@@ -96,6 +96,7 @@
 .form {
   display: flex;
   flex-direction: column;
+  min-width: 350px;
 }
 .date-item-header {
   display: flex;

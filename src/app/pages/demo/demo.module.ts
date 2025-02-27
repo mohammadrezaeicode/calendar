@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { DemoComponent } from './demo.component';
 import { RouterModule } from '@angular/router';
 import { CalendarModule } from '../../shared/calendar/calendar.module';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
   declarations: [DemoComponent],
   imports: [
     CommonModule,
-    CalendarModule,
+    SharedModule,
     RouterModule.forChild([
       {
         path: '',

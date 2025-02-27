@@ -26,7 +26,7 @@ import {
 } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Observable, Subscription, map, of, startWith } from 'rxjs';
+import { Observable, Subject, map, of, startWith, takeUntil } from 'rxjs';
 import { DateUtils } from './utils/date-utils';
 import { CalendarLogic } from './core/CalanderLogic';
 
@@ -43,8 +43,7 @@ export class CalendarComponent
   @ViewChild('boundary') boundaryElement?: ElementRef;
   @ViewChild('calendar') calendar?: MatCalendar<Date>;
   @Input() height: string = '500px';
-  eventItemSubscription: Subscription;
-  updateConfigurationSubscription: Subscription;
+  private destroy$ = new Subject<void>();
   breakPoint = false;
   form: FormGroup;
   selectedItem: CalenderItem | null = null;
@@ -69,46 +68,47 @@ export class CalendarComponent
       date: ['', Validators.required],
       label: ['', Validators.required],
     });
-    this.eventItemSubscription = calendarService
+  }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+  ngOnInit(): void {
+    this.calendarService
       .observeEventItems()
+      .pipe(takeUntil(this.destroy$))
       .subscribe((calender) => {
         this.calenderHashTable = calender;
         this.updateEventList(calender);
       });
     this.breakpointObserver
       .observe(['(max-width: 1000px)'])
+      .pipe(takeUntil(this.destroy$))
       .subscribe((result) => {
         this.breakPoint = result.matches;
       });
 
-    this.updateConfigurationSubscription =
-      this.getConfigurationChangedSubject().subscribe((value) => {
+    this.getConfigurationChangedSubject()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((value) => {
         this.updateEventList(value);
       });
-  }
-  ngOnDestroy(): void {
-    if (this.eventItemSubscription) {
-      this.eventItemSubscription.unsubscribe();
-    }
-    if (this.updateConfigurationSubscription) {
-      this.updateConfigurationSubscription.unsubscribe();
-    }
-  }
-  ngOnInit(): void {
-    this.configureCalendar();
     this.filteredOptions = this.searchControl.valueChanges.pipe(
       startWith(''),
       map((value) => this._filter(value || ''))
     );
-    this.searchControl.valueChanges.subscribe((value: string) => {
-      if (value.length > 8 && this.searchItem.indexOf(value) >= 0) {
-        let items: string[] = value.split('-');
-        if (items.length > 0) {
-          this.form.get('startTime')?.setValue(items[0]);
-          this.form.get('endTime')?.setValue(items[1]);
+    this.searchControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((value: string) => {
+        if (value.length > 8 && this.searchItem.indexOf(value) >= 0) {
+          let items: string[] = value.split('-');
+          if (items.length > 0) {
+            this.form.get('startTime')?.setValue(items[0]);
+            this.form.get('endTime')?.setValue(items[1]);
+          }
         }
-      }
-    });
+      });
+    this.configureCalendar();
   }
   updateEventList(calenderHashTable: CalenderHashTable) {
     const eventRecord: Record<number, CalenderItem[]> = {};
@@ -148,7 +148,10 @@ export class CalendarComponent
     return index + item;
   }
   dateChanged(date: MatDatepickerInputEvent<any, any>) {
-    let useDate = this.dayReservedMap[DateUtils.format(date.value)];
+    this.setSearchItem(DateUtils.format(date.value));
+  }
+  private setSearchItem(date: string) {
+    let useDate = this.dayReservedMap[date];
     let searchItem = CalenderEvent.generateRangeTimeArray();
     this.searchItem = !useDate
       ? searchItem
@@ -246,12 +249,14 @@ export class CalendarComponent
     if (this.hasMovingItem) {
       return;
     }
+    const date = new Date(item.date + ' ' + item.startTime);
     this.form.setValue({
       startTime: item.startTime,
       endTime: item.endTime,
-      date: new Date(item.date + ' ' + item.startTime),
+      date,
       label: item.event?.getLabel() ?? '',
     });
+    this.setSearchItem(DateUtils.format(date));
     this.openDialog('EDIT', item, null);
   }
   validateFormAndReturnItem(id: string | null = null): CalenderItem | null {
@@ -324,6 +329,7 @@ export class CalendarComponent
     if (this.temp) this.dialog.open(this.temp);
   }
   closeDialog() {
+    this.searchControl.setValue("")
     this.reset();
     this.dialog.closeAll();
   }
@@ -339,6 +345,8 @@ export class CalendarComponent
 
   private _filter(value: string): string[] {
     const filterValue = value.toLowerCase();
+    console.log('***', value, this.searchItem);
+
     return this.searchItem.filter((option) =>
       option.toLowerCase().includes(filterValue)
     );
@@ -346,6 +354,7 @@ export class CalendarComponent
   override selectedRow(day: number, time: number) {
     let date = super.selectedRow(day, time);
     this.form.setValue(date);
+    this.setSearchItem(DateUtils.format(date.date));
     this.openDialog('CREATE');
     return date;
   }
